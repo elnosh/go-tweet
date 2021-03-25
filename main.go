@@ -9,8 +9,14 @@ import (
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		body := twitter.ListenHashtag()
-		log.Print(string(body))
+		client := twitter.NewClient()
+		tweetResp, err := client.ListenHashtag()
+		if err != nil {
+			log.Print(err)
+		}
+		for _, tweet := range tweetResp.Data {
+			log.Printf("Tweet: %s\n", tweet.Text)
+		}
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
