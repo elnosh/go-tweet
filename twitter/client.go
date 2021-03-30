@@ -105,7 +105,7 @@ type RulesMatch struct {
 	Tag string `json:"tag"`
 }
 
-func (c *Client) StreamTweets() {
+func (c *Client) StreamTweets(input chan TweetStreamResponse) {
 	req, err := http.NewRequest("GET", streamURL, nil)
 	if err != nil {
 		log.Print(err)
@@ -119,22 +119,20 @@ func (c *Client) StreamTweets() {
 
 	jsonDecoder := json.NewDecoder(res.Body)
 
-	tweetsChan := make(chan TweetStreamResponse)
-
-	go func(tweetChan chan TweetStreamResponse, decoder *json.Decoder) {
-		for jsonDecoder.More() {
+	go func(input chan TweetStreamResponse, decoder *json.Decoder) {
+		for decoder.More() {
 
 			var tweet TweetStreamResponse
-			err := jsonDecoder.Decode(&tweet)
+			err := decoder.Decode(&tweet)
 			if err != nil {
 				log.Print(err)
 			}
 
-			tweetsChan <- tweet
+			input <- tweet
 		}
-	}(tweetsChan, jsonDecoder)
+	}(input, jsonDecoder)
 
-	tweet := <-tweetsChan
-
-	log.Printf("Tweet: %s\n", tweet.Data.Text)
+	for currentTweet := range input {
+		log.Printf("tweet: %s", currentTweet.Data.Text)
+	}
 }
