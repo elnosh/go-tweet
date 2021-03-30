@@ -119,14 +119,22 @@ func (c *Client) StreamTweets() {
 
 	jsonDecoder := json.NewDecoder(res.Body)
 
-	for jsonDecoder.More() {
+	tweetsChan := make(chan TweetStreamResponse)
 
-		var tweet TweetStreamResponse
-		err := jsonDecoder.Decode(&tweet)
-		if err != nil {
-			log.Println("error is here")
-			log.Print(err)
+	go func(tweetChan chan TweetStreamResponse, decoder *json.Decoder) {
+		for jsonDecoder.More() {
+
+			var tweet TweetStreamResponse
+			err := jsonDecoder.Decode(&tweet)
+			if err != nil {
+				log.Print(err)
+			}
+
+			tweetsChan <- tweet
 		}
-		fmt.Printf("Tweet: %v\n", tweet.Data.Text)
-	}
+	}(tweetsChan, jsonDecoder)
+
+	tweet := <-tweetsChan
+
+	log.Printf("Tweet: %s\n", tweet.Data.Text)
 }

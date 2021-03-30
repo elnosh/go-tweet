@@ -27,5 +27,6 @@ func getTweetSearch(w http.ResponseWriter, r *http.Request) {
 
 func getTweetStream(w http.ResponseWriter, r *http.Request) {
 	client := twitter.NewClient()
+
 	client.StreamTweets()
 }
