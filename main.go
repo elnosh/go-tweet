@@ -8,7 +8,8 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	log.Print("This is an amazing tweeter code")
+	http.HandleFunc("/something-else", func(w http.ResponseWriter, r *http.Request) {
 		client := twitter.NewClient()
 		tweetResp, err := client.ListenHashtag()
 		if err != nil {
