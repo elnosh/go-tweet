@@ -57,8 +57,8 @@ type SearchTweetResponse struct {
 }
 
 type Metadata struct {
-	NewestId    string `json:"newest_id"`
-	OldestId    string `json:"oldest_id"`
+	NewestID    string `json:"newest_id"`
+	OldestID    string `json:"oldest_id"`
 	ResultCount int    `json:"result_count"`
 	NextToken   string `json:"next_token"`
 }
@@ -119,20 +119,15 @@ func (c *Client) StreamTweets(input chan TweetStreamResponse) {
 
 	jsonDecoder := json.NewDecoder(res.Body)
 
-	go func(input chan TweetStreamResponse, decoder *json.Decoder) {
-		for decoder.More() {
+	for jsonDecoder.More() {
 
-			var tweet TweetStreamResponse
-			err := decoder.Decode(&tweet)
-			if err != nil {
-				log.Print(err)
-			}
-
-			input <- tweet
+		var tweet TweetStreamResponse
+		err := jsonDecoder.Decode(&tweet)
+		if err != nil {
+			log.Print(err)
 		}
-	}(input, jsonDecoder)
 
-	for currentTweet := range input {
-		log.Printf("tweet: %s", currentTweet.Data.Text)
+		input <- tweet
 	}
+
 }

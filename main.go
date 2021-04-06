@@ -31,4 +31,9 @@ func getTweetStream(w http.ResponseWriter, r *http.Request) {
 	tweetsChan := make(chan twitter.TweetStreamResponse)
 
 	go client.StreamTweets(tweetsChan)
+
+	for currentTweet := range tweetsChan {
+		log.Printf("tweet: %s", currentTweet.Data.Text)
+	}
+
 }
