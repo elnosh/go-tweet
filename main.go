@@ -3,11 +3,28 @@ package main
 import (
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/miguelhun/go-tweet/twitter"
 )
 
+var (
+	once   sync.Once
+	client *twitter.Client
+)
+
+func getClient() *twitter.Client {
+	if client == nil {
+		once.Do(
+			func() {
+				client = twitter.NewClient()
+			})
+	}
+	return client
+}
+
 func main() {
+	getClient()
 	http.HandleFunc("/search", getTweetSearch)
 	http.HandleFunc("/stream", getTweetStream)
 
@@ -15,7 +32,6 @@ func main() {
 }
 
 func getTweetSearch(w http.ResponseWriter, r *http.Request) {
-	client := twitter.NewClient()
 	tweetResp, err := client.ListenHashtag()
 	if err != nil {
 		log.Print(err)
@@ -26,8 +42,6 @@ func getTweetSearch(w http.ResponseWriter, r *http.Request) {
 }
 
 func getTweetStream(w http.ResponseWriter, r *http.Request) {
-	client := twitter.NewClient()
-
 	tweetsChan := make(chan twitter.TweetStreamResponse)
 
 	go client.StreamTweets(tweetsChan)
