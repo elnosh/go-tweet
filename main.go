@@ -1,16 +1,19 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
 
+	"github.com/go-redis/redis"
 	"github.com/miguelhun/go-tweet/twitter"
 )
 
 var (
-	once   sync.Once
-	client *twitter.Client
+	once     sync.Once
+	client   *twitter.Client
+	rdClient *redis.Client
 )
 
 func getClient() *twitter.Client {
@@ -23,8 +26,16 @@ func getClient() *twitter.Client {
 	return client
 }
 
+func rdsClient() *redis.Client {
+	rdClient = redis.NewClient(&redis.Options{})
+	// ask about this return and in getClient
+	return rdClient
+}
+
 func main() {
 	getClient()
+	rdsClient()
+
 	http.HandleFunc("/search", getTweetSearch)
 	http.HandleFunc("/stream", getTweetStream)
 
@@ -46,8 +57,21 @@ func getTweetStream(w http.ResponseWriter, r *http.Request) {
 
 	go client.StreamTweets(tweetsChan)
 
-	for currentTweet := range tweetsChan {
-		log.Printf("tweet: %s", currentTweet.Data.Text)
+	go func() {
+		for currentTweet := range tweetsChan {
+			err := publishTweet(currentTweet.Data.Text, rdClient)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}()
+}
+
+func publishTweet(tweet string, redisClient *redis.Client) error {
+	err := redisClient.Publish("tweetChannel", tweet).Err()
+	if err != nil {
+		return err
 	}
 
+	return nil
 }
