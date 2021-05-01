@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/miguelhun/go-tweet/config"
 )
@@ -15,21 +16,32 @@ const (
 	baseURL string = "https://api.twitter.com/2"
 )
 
-var (
-	hashtagURL = baseURL + "/tweets/search/recent?query=%s"
-	streamURL  = baseURL + "/tweets/search/stream"
-)
-
 type Client struct {
 	BaseURL    string
 	apiKey     string
 	HTTPClient *http.Client
 }
 
-func NewClient() *Client {
+var (
+	once          sync.Once
+	TwitterClient *Client
+	hashtagURL    = baseURL + "/tweets/search/recent?query=%s"
+	streamURL     = baseURL + "/tweets/search/stream"
+)
+
+func newClient() *Client {
 	return &Client{
 		BaseURL:    baseURL,
 		HTTPClient: &http.Client{},
+	}
+}
+
+func init() {
+	if TwitterClient == nil {
+		once.Do(
+			func() {
+				TwitterClient = newClient()
+			})
 	}
 }
 
