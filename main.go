@@ -3,28 +3,12 @@ package main
 import (
 	"log"
 	"net/http"
-	"sync"
 
+	"github.com/miguelhun/go-tweet/redis"
 	"github.com/miguelhun/go-tweet/twitter"
 )
 
-var (
-	once   sync.Once
-	client *twitter.Client
-)
-
-func getClient() *twitter.Client {
-	if client == nil {
-		once.Do(
-			func() {
-				client = twitter.NewClient()
-			})
-	}
-	return client
-}
-
 func main() {
-	getClient()
 	http.HandleFunc("/search", getTweetSearch)
 	http.HandleFunc("/stream", getTweetStream)
 
@@ -32,7 +16,7 @@ func main() {
 }
 
 func getTweetSearch(w http.ResponseWriter, r *http.Request) {
-	tweetResp, err := client.ListenHashtag()
+	tweetResp, err := twitter.TwitterClient.ListenHashtag()
 	if err != nil {
 		log.Print(err)
 	}
@@ -44,10 +28,23 @@ func getTweetSearch(w http.ResponseWriter, r *http.Request) {
 func getTweetStream(w http.ResponseWriter, r *http.Request) {
 	tweetsChan := make(chan twitter.TweetStreamResponse)
 
-	go client.StreamTweets(tweetsChan)
+	go twitter.TwitterClient.StreamTweets(tweetsChan)
 
-	for currentTweet := range tweetsChan {
-		log.Printf("tweet: %s", currentTweet.Data.Text)
+	go func() {
+		for currentTweet := range tweetsChan {
+			err := publishTweet(currentTweet.Data.Text)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}()
+}
+
+func publishTweet(tweet string) error {
+	err := redis.RedisClient.Publish("tweetChannel", tweet).Err()
+	if err != nil {
+		return err
 	}
 
+	return nil
 }
